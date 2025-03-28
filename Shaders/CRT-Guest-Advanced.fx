@@ -1929,6 +1929,7 @@ float4 ChromaticPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 	float3 fmask= clamp(lerp(one,dmask,m_glow_mask),0.0,1.0);
 	color=color+abs(glow)*fmask*Glow;
 	}
+	vig=vignette(pos);
 	color=min(color,1.0);
 	if (edgemask > 0.05) {
 		mx0 = COMPAT_TEXTURE(GUEST_S7, pos1 - dx).a; mx0 = COMPAT_TEXTURE(GUEST_S7, pos1 - dx*(1.0-0.75*sqrt(mx0))).a; 
