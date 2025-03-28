@@ -1873,7 +1873,7 @@ float4 ChromaticPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 	float bb=lerp(brightboost1,brightboost2,mx)* dark_compensate; color*=bb;
 	float3 Ref=COMPAT_TEXTURE(GUEST_S2,pos).rgb;
 	float maxb=COMPAT_TEXTURE(GUEST_S6,pos).a;
-	float vig=COMPAT_TEXTURE(GUEST_S2,clamp(pos,0.0+0.5*OrgSize.zw,1.0 -0.5*OrgSize.zw)).a;
+	float vig=COMPAT_TEXTURE(GUEST_S0,clamp(pos,0.0+0.5*OrgSize.zw,1.0 -0.5*OrgSize.zw)).a;
 	float3 bcmask=lerp(one,dmask,b_mask);
 	float3 hcmask=lerp(one,dmask,h_mask);
 	float3 Bloom1=Bloom;

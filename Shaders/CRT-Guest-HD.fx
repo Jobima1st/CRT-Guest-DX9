@@ -1554,7 +1554,7 @@ float4 HD_Pass1_PS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 	float n=-LOOPSIZE;
 	do
 	{
-	pixel=COMPAT_TEXTURE(CRTHD_S3,tex+n*dx).rgb;
+	pixel=COMPAT_TEXTURE(CRTHD_S1,tex+n*dx).rgb;
 	w=crthd_h(n+f)-sharp;
 	fpx=(abs(n+f)-FPR)*FPRi;
 	if(w<0.0)w=max(w,lerp(-maxsharp,0.0,pow(clamp(fpx,0.0,1.0),HSHARP)));
@@ -1786,7 +1786,7 @@ float4 ChromaticPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 	float bb=lerp(brightboost1,brightboost2,mx)* dark_compensate; color*=bb;
 	float3 Ref=COMPAT_TEXTURE(CRTHD_S1,pos).rgb;
 	float maxb=COMPAT_TEXTURE(CRTHD_S6,pos).a;
-	float vig=COMPAT_TEXTURE(CRTHD_S2,clamp(pos,0.0+0.5*OrgSize.zw,1.0 -0.5*OrgSize.zw)).a;
+	float vig=COMPAT_TEXTURE(CRTHD_S0,clamp(pos,0.0+0.5*OrgSize.zw,1.0 -0.5*OrgSize.zw)).a;
 	float3 bcmask=lerp(one,dmask,b_mask);
 	float3 hcmask=lerp(one,dmask,h_mask);
 	float3 Bloom1=Bloom;
