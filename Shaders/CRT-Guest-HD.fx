@@ -16,7 +16,7 @@
 	write to the Free Software Foundation, Inc, 59 Temple Place - STE 330, Boston, MA 02111-1307, USA.
 
 	Ported to ReShade by DevilSingh with some help from guest(r)
-	Unofficial update by Jobima1st to crt-guest-advanced-2025-02-28-release1 and Changed shadowMask from (0 to 14) to (-1 to 13) to match RetroArch
+	Small fix in shadowMask and Unofficial update by Jobima1st to crt-guest-advanced-2025-03-30-release1
 
 */
 
@@ -136,7 +136,7 @@ uniform float S_SHARP <
 	ui_type = "drag";
 	ui_min = 0.0;
 	ui_max = 2.0;
-	ui_step = 0.01;
+	ui_step = 0.1;
 	ui_label = "Substractive Sharpness";
 > = 1.0;
 
@@ -147,14 +147,6 @@ uniform float HSHARP <
 	ui_step = 0.1;
 	ui_label = "Sharpness Definition";
 > = 1.2;
-
-uniform float MAXS <
-	ui_type = "drag";
-	ui_min = 0.0;
-	ui_max = 0.3;
-	ui_step = 0.1;
-	ui_label = "Maximum Sharpness";
-> = 0.15;
 
 uniform float HARNG <
 	ui_type = "drag";
@@ -180,13 +172,13 @@ uniform float SIGMA_VER <
 	ui_label = "Vertical Blur Sigma";
 > = 0.5;
 
-uniform float spike <
+uniform float MAXS <
 	ui_type = "drag";
 	ui_min = 0.0;
-	ui_max = 2.0;
-	ui_step = 0.1;
-	ui_label = "Scanlines Spike Removal";
-> = 1.0;
+	ui_max = 0.3;
+	ui_step = 0.01;
+	ui_label = "Maximum Sharpness";
+> = 0.15;
 
 uniform float m_glow <
 	ui_type = "drag";
@@ -484,6 +476,14 @@ uniform float scan_falloff <
 	ui_label = "Scanlines Falloff";
 > = 1.0;
 
+uniform float spike <
+	ui_type = "drag";
+	ui_min = 0.0;
+	ui_max = 2.0;
+	ui_step = 0.1;
+	ui_label = "Scanlines Spike Removal";
+> = 1.0;
+
 uniform float ssharp <
 	ui_type = "drag";
 	ui_min = 0.0;
@@ -614,18 +614,18 @@ uniform float overscany <
 
 uniform float shadow_msk <
 	ui_type = "drag";
-	ui_min = -1.0;
-	ui_max = 13.0;
+	ui_min = 0.0;
+	ui_max = 14.0;
 	ui_step = 1.0;
-	ui_label = "CRT Mask: 0:CGWG | 1-4:Lottes | 5-13:Trinitron";
-> = 0.0;
+	ui_label = "CRT Mask: 1:CGWG | 2-5:Lottes | 6-14:Trinitron";
+> = 1.0;
 
 uniform float maskstr <
 	ui_type = "drag";
 	ui_min = -0.5;
 	ui_max = 1.0;
 	ui_step = 0.025;
-	ui_label = "Mask Strength (0, 5-13)";
+	ui_label = "Mask Strength (1, 6-14)";
 > = 0.3;
 
 uniform float mcut <
@@ -961,6 +961,12 @@ sampler CRTHD_S7{Texture=CRTHD_T7;AddressU=BORDER;AddressV=BORDER;AddressW=BORDE
 
 uniform int framecount<source="framecount";>;
 
+float3 plant(float3 tar,float r)
+{
+	float t=max(max(tar.r,tar.g),tar.b)+0.00001;
+	return tar*r/t;
+}
+
 float vignette(float2 pos)
 {
 	float2 b=vigdef*float2(1.0,OrgSize.x/OrgSize.y)*0.125;
@@ -969,12 +975,6 @@ float vignette(float2 pos)
 	float2 res=lerp(0.0.xx,1.0.xx,smoothstep(1.0.xx,1.0.xx-b,sqrt(pos)));
 	res=pow(res,0.70.xx);
 	return max(lerp(1.0,sqrt(res.x*res.y),vigstr),0.0);
-}
-
-float3 plant(float3 tar,float r)
-{
-	float t=max(max(tar.r,tar.g),tar.b)+0.00001;
-	return tar*r/t;
 }
 
 float crthd_h(float x)
@@ -1105,11 +1105,6 @@ float3 v_resample(float2 tex0,float4 size)
 float smothstep (float e0, float e1, float x)
 {
 	return clamp((x - e0) / (e1 - e0), 0.0, 1.0);
-}
-
-float shadow_msk(float shadow_msk)
-{
-shadow_msk = shadow_msk + 1;
 }
 
 float3 crt_mask(float2 pos,float mx,float mb)
@@ -1410,13 +1405,9 @@ float4 LinearizePS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 	return float4(c,gamma_in);
 }
 
-float FINE_GAUSS(float FINE_GAUSS)
-{
-(FINE_GAUSS > 0.5) ? FINE_GAUSS : lerp(0.75, 0.5, -FINE_GAUSS);
-}
-
 float4 HGaussianPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Target
 {
+float FINE_GAUSS = (FINE_GAUSS > 0.5) ? FINE_GAUSS : lerp(0.75, 0.5, -FINE_GAUSS);
 	float4 GaussSize=float4(OrgSize.x,OrgSize.y,OrgSize.z,OrgSize.w)*float4(FINE_GAUSS,FINE_GAUSS,1.0/FINE_GAUSS,1.0/FINE_GAUSS);
 	float f=frac(GaussSize.x*texcoord.x);
 	f=0.5-f;
@@ -1446,6 +1437,7 @@ float4 HGaussianPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 
 float4 VGaussianPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Target
 {
+float FINE_GAUSS = (FINE_GAUSS > 0.5) ? FINE_GAUSS : lerp(0.75, 0.5, -FINE_GAUSS);
 	float4 GaussSize=float4(SrcSize.x,OrgSize.y,SrcSize.z,OrgSize.w)*float4(FINE_GAUSS,FINE_GAUSS,1.0/FINE_GAUSS,1.0/FINE_GAUSS);
 	float f=frac(GaussSize.y*texcoord.y);
 	f=0.5-f;
@@ -1468,13 +1460,9 @@ float4 VGaussianPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 	return float4(color,1.0);
 }
 
-float FINE_BLOOM(float FINE_BLOOM)
-{
-(FINE_BLOOM > 0.5) ? FINE_BLOOM : lerp(0.75, 0.5, -FINE_BLOOM);
-}
-
 float4 BloomHorzPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Target
 {
+float FINE_BLOOM = (FINE_BLOOM > 0.5) ? FINE_BLOOM : lerp(0.75, 0.5, -FINE_BLOOM);
 	float4 BloomSize=float4(OrgSize.x,OrgSize.y,OrgSize.z,OrgSize.w)*float4(FINE_BLOOM,FINE_BLOOM,1.0/FINE_BLOOM,1.0/FINE_BLOOM);
 	float f=frac(BloomSize.x*texcoord.x);
 	f=0.5-f;
@@ -1501,6 +1489,7 @@ float4 BloomHorzPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 
 float4 BloomVertPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Target
 {
+float FINE_BLOOM = (FINE_BLOOM > 0.5) ? FINE_BLOOM : lerp(0.75, 0.5, -FINE_BLOOM);
 	float4 BloomSize=float4(SrcSize.x,OrgSize.y,SrcSize.z,OrgSize.w)*float4(FINE_BLOOM,FINE_BLOOM,1.0/FINE_BLOOM,1.0/FINE_BLOOM);
 	float f=frac(BloomSize.y*texcoord.y);
 	f=0.5-f;
@@ -1727,7 +1716,7 @@ float4 ChromaticPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 	float3 dmask=one;
 	float3 emask=one;
 	float mwidths[15]={0.0,2.0,3.0,3.0,6.0,6.0,2.4,3.5,2.4,3.25,3.5,4.5,4.25,7.5,6.25};
-	float mwidth=mwidths[int(shadow_msk)];
+	float mwidth=mwidths[int(shadow_msk-1)];
 	float mask_compensate=frac(mwidth);
 	if(shadow_msk> 0.5)
 	{
@@ -1844,7 +1833,6 @@ float4 ChromaticPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 	}
 	vig=vignette(pos);
 	color=min(color,1.0);
-
 	if (edgemask > 0.05) {
 		mx0 = COMPAT_TEXTURE(CRTHD_S7, pos1 - dx).a; mx0 = COMPAT_TEXTURE(CRTHD_S7, pos1 - dx*(1.0-0.75*sqrt(mx0))).a; 
 		mx2 = COMPAT_TEXTURE(CRTHD_S7, pos1 + dx).a; mx2 = COMPAT_TEXTURE(CRTHD_S7, pos1 + dx*(1.0-0.75*sqrt(mx2))).a; 
@@ -1857,7 +1845,6 @@ float4 ChromaticPS(float4 position:SV_Position,float2 texcoord:TEXCOORD):SV_Targ
 		color = max(ctemp + lerp(3.5*mb*lerp(1.625*ctemp,ctemp,cx), 0.0.xxx, pow(color, 0.75.xxx-0.5*colmx)),color); }
 
 	color = color * lerp(1.0, lerp(0.5*(1.0+w3), w3, mx), pr_scan);
-
 	color=min(color,max(orig1,color)* lerp(one,dmask,mclip));
 	color=pow(color,1.0/gamma_o);
 	float rc=0.6*sqrt(max(max(color.r,color.g),color.b))+0.4;
@@ -1919,5 +1906,6 @@ technique CRT_Guest_HD
 	pass Chromatic
 	{
 	VertexShader=PostProcessVS;
-	PixelShader=ChromaticPS;	}
+	PixelShader=ChromaticPS;
+	}
 }
